@@ -32,9 +32,7 @@ import java.util.TreeSet;
 import static hudson.Functions.humanReadableByteSize;
 import static org.jenkinsci.plugins.googleplayandroidpublisher.ApkPublisher.ExpansionFileSet;
 import static org.jenkinsci.plugins.googleplayandroidpublisher.ApkPublisher.RecentChanges;
-import static org.jenkinsci.plugins.googleplayandroidpublisher.Constants.DEOBFUSCATION_FILE_TYPE_PROGUARD;
-import static org.jenkinsci.plugins.googleplayandroidpublisher.Constants.OBB_FILE_TYPE_MAIN;
-import static org.jenkinsci.plugins.googleplayandroidpublisher.Constants.OBB_FILE_TYPE_PATCH;
+import static org.jenkinsci.plugins.googleplayandroidpublisher.Constants.*;
 
 class ApkUploadTask extends TrackPublisherTask<Boolean> {
 
@@ -64,26 +62,26 @@ class ApkUploadTask extends TrackPublisherTask<Boolean> {
     protected Boolean execute() throws IOException, InterruptedException {
         // Open an edit via the Google Play API, thereby ensuring that our credentials etc. are working
         logger.println(String.format("Authenticating to Google Play API...%n" +
-                        "- Credential:     %s%n" +
-                        "- Application ID: %s%n", getCredentialName(), applicationId));
+                "- Credential:     %s%n" +
+                "- Application ID: %s%n", getCredentialName(), applicationId));
         createEdit(applicationId);
 
         // Before doing anything else, verify that the desired track exists
         // TODO: Refactor this and the weird class hierarchy
         List<Track> tracks = editService.tracks().list(applicationId, editId).execute().getTracks();
         String canonicalTrackName = tracks.stream()
-            .filter(it -> it.getTrack().equalsIgnoreCase(trackName))
-            .map(Track::getTrack)
-            .findFirst()
-            .orElse(null);
+                .filter(it -> it.getTrack().equalsIgnoreCase(trackName))
+                .map(Track::getTrack)
+                .findFirst()
+                .orElse(null);
         if (canonicalTrackName == null) {
             // If you ask Google Play for the list of tracks, it won't include any which don't yet have a release…
             // TODO: I don't yet know whether Google Play also ignores built-in tracks, if they have no releases;
             //       but we can make things a little bit smoother by avoiding doing this check for built-in track names,
             //       and ensuring we use the lowercase track name for those
             String msgFormat = "Release track '%s' could not be found on Google Play%n" +
-                "- This may be because this track does not yet have any releases, so we will continue… %n" +
-                "- Note: Custom track names are case-sensitive; double-check your configuration, if this build fails%n";
+                    "- This may be because this track does not yet have any releases, so we will continue… %n" +
+                    "- Note: Custom track names are case-sensitive; double-check your configuration, if this build fails%n";
             logger.println(String.format(msgFormat, trackName));
         } else {
             // Track names are case-sensitive, so override the user-provided value from the job config
@@ -150,17 +148,19 @@ class ApkUploadTask extends TrackPublisherTask<Boolean> {
             final FilePath mappingFile = appFile.getMappingFile();
             if (mappingFile != null) {
                 final String relativeFileName = getRelativeFileName(mappingFile);
+                final String deobfusctationFileType = (mappingFile.getName().contains("zip")) ?
+                        DEOBFUSCATION_FILE_TYPE_NATIVE : DEOBFUSCATION_FILE_TYPE_PROGUARD;
 
                 // Google Play API doesn't accept empty mapping files
                 logger.println(String.format(" Mapping file size: %s", mappingFile.length()));
                 if (mappingFile.length() == 0) {
-                    logger.println(String.format(" Ignoring empty ProGuard mapping file: %s", relativeFileName));
+                    logger.println(String.format(" Ignoring empty ProGuard or Native symbols mapping file: %s", relativeFileName));
                 } else {
-                    logger.println(String.format(" Uploading associated ProGuard mapping file: %s", relativeFileName));
+                    logger.println(String.format(" Uploading associated ProGuard or Native symbols mapping file: %s", relativeFileName));
                     FileContent mapping =
                             new FileContent("application/octet-stream", new File(mappingFile.getRemote()));
                     editService.deobfuscationfiles().upload(applicationId, editId, Math.toIntExact(uploadedVersionCode),
-                            DEOBFUSCATION_FILE_TYPE_PROGUARD, mapping).execute();
+                            deobfusctationFileType, mapping).execute();
                 }
             }
             logger.println("");

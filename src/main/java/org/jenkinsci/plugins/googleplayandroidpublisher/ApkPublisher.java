@@ -419,6 +419,12 @@ public class ApkPublisher extends GooglePlayPublisher {
                         "no files will be uploaded", mappingFilesPattern));
                 return false;
             }
+            final Boolean isZip = relativeMappingPaths.stream().anyMatch(path -> path.endsWith("zip"));
+            final Boolean isTxt = relativeMappingPaths.stream().anyMatch(path -> path.endsWith("txt"));
+            if (isZip && isTxt)  {
+                logger.println(String.format("There should only be one file type Proguard or Native symbols", mappingFilesPattern));
+                return false;
+            }
 
             // Create a mapping of app files to their obfuscation mapping file
             if (relativeMappingPaths.size() == 1) {

@@ -1,9 +1,10 @@
 <div>
-  Specifies filenames or patterns matching one or more ProGuard mapping
+  Specifies filenames or patterns matching one or more ProGuard or Native code mapping
   files that should be uploaded to Google Play, so that it can automatically
   deobfuscate stacktraces from crash reports.
   <p/>
   You can use wildcards like "<tt>**/build/**/mapping.txt</tt>".<br/>
+  You can use wildcards like "<tt>**/build/**/symbols.zip</tt>".<br/>
   See <a href='https://ant.apache.org/manual/Types/fileset.html'>
   the 'includes' attribute of Ant's FileSet</a> for the exact format.<br/>
   Note that multiple entries must be comma-separated.
